@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homoglyph Studio — Сервис замены и маскировки символов</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.3);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.5);
+    }
+
+    .replaced-char {
+      background-color: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+      border-bottom: 2px solid #10b981;
+      font-weight: 600;
+      cursor: help;
+      position: relative;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+    .dark .replaced-char {
+      background-color: rgba(16, 185, 129, 0.25);
+      color: #34d399;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen font-sans transition-colors duration-200">
+  
+  <!-- Header / Navigation -->
+  <header class="border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 font-mono font-bold text-lg">
+          A/А
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+            Homoglyph Studio
+          </h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Скрытая замена букв и омоглифов</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="toggle-theme-btn" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300">
+          <i class="fa-solid fa-moon dark:hidden"></i>
+          <i class="fa-solid fa-sun hidden dark:inline"></i>
+        </button>
+        <a href="#reference" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <i class="fa-solid fa-book-open"></i> Таблица замен
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    
+    <!-- Hero / Info banner -->
+    <div class="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+        <span class="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
+          <i class="fa-solid fa-shield-halved"></i>
+        </span>
+        <span>
+          Визуально текст выглядит <strong>абсолютно одинаково</strong>, но для поисковиков, нейросетей, спам-фильтров и проверок уникальности каждый подмененный символ имеет другой Unicode-код.
+        </span>
+      </div>
+    </div>
+
+    <!-- Controls Toolbar -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Режим подмены -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+            Режим направления
+          </label>
+          <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/50">
+            <button class="mode-btn active py-1.5 px-2 rounded-lg text-xs font-medium text-center transition bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" data-mode="all">
+              Все подряд
+            </button>
+            <button class="mode-btn py-1.5 px-2 rounded-lg text-xs font-medium text-center transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-mode="cyr2lat">
+              КИР ➔ ЛАТ
+            </button>
+            <button class="mode-btn py-1.5 px-2 rounded-lg text-xs font-medium text-center transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-mode="lat2cyr">
+              ЛАТ ➔ КИР
+            </button>
+          </div>
+        </div>
+
+        <!-- Вероятность подмены -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Вероятность замены: <span id="prob-val" class="font-mono text-emerald-600 dark:text-emerald-400">100%</span>
+            </label>
+            <span class="text-[10px] text-slate-400">Случайная маскировка</span>
+          </div>
+          <input type="range" id="probability" min="1" max="100" value="100" class="w-full accent-emerald-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-800 rounded-lg">
+        </div>
+
+        <!-- Опции спецсимволов -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+            Дополнительные омоглифы
+          </label>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer text-xs select-none">
+              <input type="checkbox" id="opt-pipes" class="accent-emerald-500 rounded border-slate-300">
+              <span>Заменять латинские <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-emerald-600 font-mono">l</code>, <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-emerald-600 font-mono">I</code> на черту <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-emerald-600 font-mono">|</code></span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-xs select-none">
+              <input type="checkbox" id="opt-zeros" class="accent-emerald-500 rounded border-slate-300">
+              <span>Заменять буквы <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-emerald-600 font-mono">O/О</code> на ноль <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-emerald-600 font-mono">0</code></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Workspace: 2 Textareas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Ввод текста -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-regular fa-keyboard text-slate-400"></i>
+            <span class="text-sm font-semibold">Оригинальный текст</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="paste-btn" class="px-2.5 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">
+              <i class="fa-regular fa-clipboard"></i> Вставить
+            </button>
+            <button id="clear-btn" class="px-2.5 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-rose-500/10 hover:text-rose-500 text-slate-500 transition">
+              <i class="fa-regular fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+        <textarea id="input-text" class="w-full flex-1 p-5 bg-transparent resize-none focus:outline-none font-mono text-sm leading-relaxed text-slate-900 dark:text-slate-100 min-h-[340px]" placeholder="Введите или вставьте текст на русском или английском языке..."></textarea>
+        <div class="px-5 py-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/30 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-mono">
+          <span id="in-chars">Символов: 0</span>
+          <span id="in-words">Слов: 0</span>
+        </div>
+      </div>
+
+      <!-- Результат -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-wand-magic-sparkles text-emerald-500"></i>
+              <span class="text-sm font-semibold">Результат</span>
+            </div>
+            <!-- Переключатель режима подсветки -->
+            <label class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 cursor-pointer">
+              <input type="checkbox" id="toggle-highlight" checked class="accent-emerald-500 rounded">
+              <span>Подсветка</span>
+            </label>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="copy-btn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center gap-1.5 transition">
+              <i class="fa-regular fa-copy"></i>
+              <span>Копировать</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Поле с подсветкой (DIV) и скрытое чистое для копирования -->
+        <div class="relative flex-1 min-h-[340px]">
+          <div id="output-highlight" class="w-full h-full p-5 overflow-y-auto font-mono text-sm leading-relaxed text-slate-900 dark:text-slate-100 whitespace-pre-wrap select-text break-words"></div>
+          <textarea id="output-plain" class="hidden w-full h-full p-5 bg-transparent resize-none focus:outline-none font-mono text-sm leading-relaxed text-slate-900 dark:text-slate-100 select-all" readonly></textarea>
+        </div>
+
+        <div class="px-5 py-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/30 dark:bg-slate-900/30 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-mono">
+          <span id="out-stats" class="text-emerald-600 dark:text-emerald-400 font-semibold">Заменено: 0 (0%)</span>
+          <span id="out-chars">Символов: 0</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Справочник / Reference Table -->
+    <div id="reference" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold flex items-center gap-2">
+            <i class="fa-solid fa-table-list text-emerald-500"></i>
+            Таблица поддерживаемых омоглифов
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Визуально идентичные пары символов из разных наборов Unicode</p>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-2" id="pairs-grid">
+        <!-- Pairs will be populated by JS -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-2.5 rounded-xl shadow-xl border border-slate-800 dark:border-slate-200 text-xs font-semibold flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none z-50">
+    <i class="fa-solid fa-check text-emerald-400 dark:text-emerald-600"></i>
+    <span id="toast-msg">Скопировано в буфер обмена!</span>
+  </div>
+
+  <script>
+    // --- Словари соответствий (Homoglyph maps) ---
+    // Cyrillic to Latin
+    const CYR_TO_LAT = {
+      'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H',
+      'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'Х': 'X',
+      'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'у': 'y', 'х': 'x', 'і': 'i', 'ј': 'j'
+    };
+
+    // Latin to Cyrillic
+    const LAT_TO_CYR = {
+      'A': 'А', 'B': 'В', 'C': 'С', 'E': 'Е', 'H': 'Н', 'K': 'К',
+      'M': 'М', 'O': 'О', 'P': 'Р', 'T': 'Т', 'X': 'Х', 'Y': 'У',
+      'a': 'а', 'c': 'с', 'e': 'е', 'i': 'і', 'j': 'ј', 'o': 'о', 'p': 'р', 'x': 'х', 'y': 'у'
+    };
+
+    // Все взаимные пары
+    const ALL_PAIRS = {
+      ...CYR_TO_LAT,
+      ...LAT_TO_CYR
+    };
+
+    // State
+    let currentMode = 'all'; // 'all', 'cyr2lat', 'lat2cyr'
+    let lastGeneratedPlain = '';
+
+    // DOM Elements
+    const inputText = document.getElementById('input-text');
+    const outputHighlight = document.getElementById('output-highlight');
+    const outputPlain = document.getElementById('output-plain');
+    const copyBtn = document.getElementById('copy-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const pasteBtn = document.getElementById('paste-btn');
+    const probSlider = document.getElementById('probability');
+    const probVal = document.getElementById('prob-val');
+    const optPipes = document.getElementById('opt-pipes');
+    const optZeros = document.getElementById('opt-zeros');
+    const toggleHighlight = document.getElementById('toggle-highlight');
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toast-msg');
+    const themeBtn = document.getElementById('toggle-theme-btn');
+    const inChars = document.getElementById('in-chars');
+    const inWords = document.getElementById('in-words');
+    const outChars = document.getElementById('out-chars');
+    const outStats = document.getElementById('out-stats');
+
+    // Theme toggle
+    themeBtn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+    });
+
+    // Mode Buttons
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn').forEach(b => {
+          b.classList.remove('active', 'bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+          b.classList.add('text-slate-600', 'dark:text-slate-400');
+        });
+        btn.classList.add('active', 'bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-sm');
+        btn.classList.remove('text-slate-600', 'dark:text-slate-400');
+        currentMode = btn.dataset.mode;
+        processText();
+      });
+    });
+
+    probSlider.addEventListener('input', (e) => {
+      probVal.textContent = e.target.value + '%';
+      processText();
+    });
+
+    optPipes.addEventListener('change', processText);
+    optZeros.addEventListener('change', processText);
+
+    toggleHighlight.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        outputHighlight.classList.remove('hidden');
+        outputPlain.classList.add('hidden');
+      } else {
+        outputHighlight.classList.add('hidden');
+        outputPlain.classList.remove('hidden');
+      }
+    });
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function processText() {
+      const text = inputText.value;
+      const prob = parseInt(probSlider.value, 10) / 100;
+      const usePipes = optPipes.checked;
+      const useZeros = optZeros.checked;
+
+      let resultHtml = '';
+      let resultPlain = '';
+      let replacementsCount = 0;
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        let replaced = null;
+
+        // Custom specials first if enabled
+        if (usePipes && (ch === 'l' || ch === 'I')) {
+          if (Math.random() <= prob) replaced = '|';
+        } else if (useZeros && (ch === 'O' || ch === 'О' || ch === 'o' || ch === 'о')) {
+          if (Math.random() <= prob) replaced = '0';
+        } else {
+          // Standard mapping based on mode
+          let target = null;
+          if (currentMode === 'all') {
+            target = ALL_PAIRS[ch];
+          } else if (currentMode === 'cyr2lat') {
+            target = CYR_TO_LAT[ch];
+          } else if (currentMode === 'lat2cyr') {
+            target = LAT_TO_CYR[ch];
+          }
+
+          if (target && Math.random() <= prob) {
+            replaced = target;
+          }
+        }
+
+        if (replaced !== null && replaced !== ch) {
+          replacementsCount++;
+          resultPlain += replaced;
+          const escOrig = escapeHtml(ch);
+          const escRep = escapeHtml(replaced);
+          resultHtml += `<span class="replaced-char" title="Было: '${escOrig}' (U+${ch.charCodeAt(0).toString(16).toUpperCase()}) ➔ Стало: '${escRep}' (U+${replaced.charCodeAt(0).toString(16).toUpperCase()})">${escRep}</span>`;
+        } else {
+          resultPlain += ch;
+          resultHtml += escapeHtml(ch);
+        }
+      }
+
+      lastGeneratedPlain = resultPlain;
+      outputHighlight.innerHTML = resultHtml || '<span class="text-slate-400 italic">Здесь отобразится преобразованный текст с подсветкой замен...</span>';
+      outputPlain.value = resultPlain;
+
+      // Stats
+      const totalLen = text.length;
+      const wordsCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+      inChars.textContent = `Символов: ${totalLen}`;
+      inWords.textContent = `Слов: ${wordsCount}`;
+
+      outChars.textContent = `Символов: ${resultPlain.length}`;
+      const pct = totalLen > 0 ? ((replacementsCount / totalLen) * 100).toFixed(1) : '0';
+      outStats.textContent = `Заменено: ${replacementsCount} (${pct}%)`;
+    }
+
+    inputText.addEventListener('input', processText);
+
+    // Clipboard copy
+    copyBtn.addEventListener('click', async () => {
+      if (!lastGeneratedPlain) {
+        showToast('Нечего копировать!');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(lastGeneratedPlain);
+        showToast('Текст скопирован в буфер!');
+      } catch (err) {
+        // Fallback
+        outputPlain.classList.remove('hidden');
+        outputPlain.select();
+        document.execCommand('copy');
+        if (toggleHighlight.checked) outputPlain.classList.add('hidden');
+        showToast('Текст скопирован!');
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      inputText.value = '';
+      processText();
+      inputText.focus();
+    });
+
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        const clipText = await navigator.clipboard.readText();
+        inputText.value = clipText;
+        processText();
+      } catch (e) {
+        showToast('Разрешите доступ к буферу обмена');
+      }
+    });
+
+    function showToast(msg) {
+      toastMsg.textContent = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 2200);
+    }
+
+    // Populate Reference Grid
+    const pairsGrid = document.getElementById('pairs-grid');
+    const demoPairs = [
+      { cyr: 'А', lat: 'A', name: 'A' },
+      { cyr: 'В', lat: 'B', name: 'B / В' },
+      { cyr: 'С', lat: 'C', name: 'C / С' },
+      { cyr: 'Е', lat: 'E', name: 'E / Е' },
+      { cyr: 'Н', lat: 'H', name: 'H / Н' },
+      { cyr: 'К', lat: 'K', name: 'K / К' },
+      { cyr: 'М', lat: 'M', name: 'M / М' },
+      { cyr: 'О', lat: 'O', name: 'O / О' },
+      { cyr: 'Р', lat: 'P', name: 'P / Р' },
+      { cyr: 'Т', lat: 'T', name: 'T / Т' },
+      { cyr: 'Х', lat: 'X', name: 'X / Х' },
+      { cyr: 'а', lat: 'a', name: 'a / а' },
+      { cyr: 'с', lat: 'c', name: 'c / с' },
+      { cyr: 'е', lat: 'e', name: 'e / е' },
+      { cyr: 'о', lat: 'o', name: 'o / о' },
+      { cyr: 'р', lat: 'p', name: 'p / р' },
+      { cyr: 'у', lat: 'y', name: 'y / у' },
+      { cyr: 'х', lat: 'x', name: 'x / х' },
+    ];
+
+    demoPairs.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200/70 dark:border-slate-800 text-center';
+      card.innerHTML = `
+        <div class="text-base font-mono font-bold flex items-center justify-center gap-2 text-slate-800 dark:text-slate-100">
+          <span>${p.cyr}</span>
+          <span class="text-xs text-slate-400">⇄</span>
+          <span>${p.lat}</span>
+        </div>
+        <div class="text-[10px] text-slate-400 mt-1 uppercase tracking-wide">
+          U+${p.cyr.charCodeAt(0).toString(16).toUpperCase()} / U+${p.lat.charCodeAt(0).toString(16).toUpperCase()}
+        </div>
+      `;
+      pairsGrid.appendChild(card);
+    });
+
+    // Initial demo text
+    inputText.value = "Привет, мир! Это сервис маскировки текста. Некоторые буквы здесь будут заменены на латинские аналoги, нo визуально текст останется абсолютно читаемым.";
+    processText();
+  </script>
+</body>
+</html>
